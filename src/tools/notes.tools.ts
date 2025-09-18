@@ -46,20 +46,32 @@ export function registerNotesTools(server: McpServer) {
       category: z.string().optional().describe('The new category of the note'),
     },
     async ({ note_id, etag, title, content, category }) => {
-      const note = await getClient(NotesClient).updateNote(note_id, etag, title, content, category);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              id: note.id,
-              title: note.title,
-              category: note.category,
-              etag: note.etag,
-            }, null, 2),
-          },
-        ],
-      };
+      try {
+        const note = await getClient(NotesClient).updateNote(note_id, etag, title, content, category);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                id: note.id,
+                title: note.title,
+                category: note.category,
+                etag: note.etag,
+                success: true,
+              }, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error updating note ${note_id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            },
+          ],
+        };
+      }
     }
   );
 
@@ -71,27 +83,39 @@ export function registerNotesTools(server: McpServer) {
       content: z.string().describe('The content to append'),
     },
     async ({ note_id, content }) => {
-      const note = await getClient(NotesClient).getNote(note_id);
-      const newContent = `${note.content}\n---\n${content}`;
-      const updatedNote = await getClient(NotesClient).updateNote(
-        note_id,
-        note.etag,
-        undefined,
-        newContent
-      );
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              id: updatedNote.id,
-              title: updatedNote.title,
-              category: updatedNote.category,
-              etag: updatedNote.etag,
-            }, null, 2),
-          },
-        ],
-      };
+      try {
+        const note = await getClient(NotesClient).getNote(note_id);
+        const newContent = `${note.content}\n${content}`;
+        const updatedNote = await getClient(NotesClient).updateNote(
+          note_id,
+          note.etag,
+          undefined,
+          newContent
+        );
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                id: updatedNote.id,
+                title: updatedNote.title,
+                category: updatedNote.category,
+                etag: updatedNote.etag,
+                appended_content: content,
+              }, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error appending content to note ${note_id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            },
+          ],
+        };
+      }
     }
   );
 

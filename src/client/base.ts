@@ -26,7 +26,16 @@ export class BaseNextcloudClient {
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(`Nextcloud API request failed: ${error.message}`);
+        const status = error.response?.status;
+        const statusText = error.response?.statusText;
+        const responseData = error.response?.data;
+        
+        // Provide more detailed error information, especially for 412 Precondition Failed
+        if (status === 412) {
+          throw new Error(`Nextcloud API request failed: ${error.message} (Status: ${status} ${statusText}) - This usually indicates an ETag mismatch. Response: ${JSON.stringify(responseData)}`);
+        }
+        
+        throw new Error(`Nextcloud API request failed: ${error.message} (Status: ${status} ${statusText})`);
       } else {
         throw new Error(`An unexpected error occurred: ${error}`);
       }
