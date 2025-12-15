@@ -1,8 +1,6 @@
 # Nextcloud MCP Server - Docker Compose
 # For self-hosting on VPS at mcp.techmavie.digital/nextcloud
 
-version: '3.8'
-
 services:
   mcp-nextcloud:
     build: .
@@ -17,8 +15,6 @@ services:
       - NEXTCLOUD_USERNAME=${NEXTCLOUD_USERNAME:-}
       - NEXTCLOUD_PASSWORD=${NEXTCLOUD_PASSWORD:-}
       - NODE_ENV=production
-    env_file:
-      - .env
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
