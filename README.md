@@ -1,8 +1,10 @@
 # Nextcloud MCP Server
 
-[![smithery badge](https://smithery.ai/badge/@hithereiamaliff/mcp-nextcloud)](https://smithery.ai/server/@hithereiamaliff/mcp-nextcloud)
+**MCP Endpoint:** `https://mcp.techmavie.digital/nextcloud/mcp`
 
-> **Note:** This project is a complete rewrite in TypeScript of the original Python-based [cbcoutinho/nextcloud-mcp-server](https://github.com/cbcoutinho/nextcloud-mcp-server), now with **Smithery deployment support** for one-click cloud deployment.
+**Analytics Dashboard:** [`https://mcp.techmavie.digital/nextcloud/analytics/dashboard`](https://mcp.techmavie.digital/nextcloud/analytics/dashboard)
+
+> **Note:** This project is a complete rewrite in TypeScript of the original Python-based [cbcoutinho/nextcloud-mcp-server](https://github.com/cbcoutinho/nextcloud-mcp-server), now with **self-hosted VPS deployment** and **Smithery deployment support**.
 >
 > ### Key Differences from the Original Repository:
 > *   **Language:** This project is written in TypeScript, while the original is in Python.
@@ -332,54 +334,77 @@ When deploying via Smithery, you can configure credentials through:
 
 ## Deployment & Usage
 
-### Option 1: npm Package (Recommended for End Users)
+### Option 1: Hosted Server (Recommended)
 
-The easiest way for users to get started:
+The easiest way to use this MCP server is via the hosted endpoint. **No installation required!**
+
+**Endpoint:** `https://mcp.techmavie.digital/nextcloud/mcp`
+
+#### Authentication via URL Query Parameters
+
+You can provide your Nextcloud credentials directly in the URL:
+
+```
+https://mcp.techmavie.digital/nextcloud/mcp?nextcloudHost=https://cloud.example.com&nextcloudUsername=your_user&nextcloudPassword=your_app_password
+```
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `nextcloudHost` | Your Nextcloud instance URL | `https://cloud.example.com` |
+| `nextcloudUsername` | Your Nextcloud username | `john` |
+| `nextcloudPassword` | Your Nextcloud app password | `xxxxx-xxxxx-xxxxx-xxxxx` |
+
+#### Client Configuration (Claude Desktop / Cursor / Windsurf)
+
+```json
+{
+  "mcpServers": {
+    "nextcloud": {
+      "transport": "streamable-http",
+      "url": "https://mcp.techmavie.digital/nextcloud/mcp?nextcloudHost=https://cloud.example.com&nextcloudUsername=your_user&nextcloudPassword=your_app_password"
+    }
+  }
+}
+```
+
+#### Test with MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector
+# Select "Streamable HTTP"
+# Enter URL: https://mcp.techmavie.digital/nextcloud/mcp?nextcloudHost=...&nextcloudUsername=...&nextcloudPassword=...
+```
+
+### Option 2: Self-Hosted (VPS)
+
+If you prefer to run your own instance, see [deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md) for detailed VPS deployment instructions with Docker and Nginx.
+
+```bash
+# Using Docker
+docker compose up -d --build
+
+# Or run directly
+npm run build
+npm run start:http
+```
+
+### Option 3: npm Package (CLI)
+
+Install and run as a local MCP server:
 
 ```bash
 npm install -g mcp-nextcloud
 mcp-nextcloud
 ```
 
-This installs a global CLI that can be used directly with MCP clients.
+### Option 4: Smithery Deployment
 
-### Option 2: Local Development with Smithery Playground
-
-The fastest way to test your server locally during development:
+For cloud deployment via Smithery:
 
 ```bash
-npm run dev
+npm run dev    # Local development with Smithery playground
+npm run deploy # Deploy to Smithery cloud
 ```
-
-This will:
-1. Build the TypeScript project
-2. Start the Smithery development server
-3. Automatically open the Smithery playground in your browser
-4. Connect to your local server for immediate testing
-
-### Option 3: Cloud Deployment via Smithery
-
-1. Ensure your project is configured:
-   ```bash
-   npm run build
-   ```
-
-2. Deploy to Smithery:
-   ```bash
-   npm run deploy
-   ```
-
-3. Follow the Smithery deployment prompts to configure your Nextcloud credentials securely.
-
-### Manual Local Development
-
-For traditional local development:
-
-```bash
-npm run start
-```
-
-The server will start and listen for MCP connections.
 
 ## Publishing to npm
 
@@ -462,13 +487,23 @@ This project includes full Smithery support with:
 ```
 ├── src/
 │   ├── index.ts          # Main Smithery entry point
+│   ├── http-server.ts    # Streamable HTTP server for VPS deployment
 │   ├── app.ts            # Legacy entry point
 │   ├── client/           # Nextcloud API clients
 │   ├── models/           # TypeScript interfaces
-│   └── server/           # Tool implementations
+│   ├── tools/            # Tool implementations
+│   └── utils/            # Utility functions
+├── deploy/
+│   ├── DEPLOYMENT.md     # VPS deployment guide
+│   └── nginx-mcp.conf    # Nginx reverse proxy config
+├── .github/
+│   └── workflows/
+│       └── deploy-vps.yml # GitHub Actions auto-deploy
+├── docker-compose.yml    # Docker deployment config
+├── Dockerfile            # Container build config
 ├── smithery.yaml         # Smithery configuration
 ├── package.json          # Project dependencies and scripts
-└── README.md            # This file
+└── README.md             # This file
 ```
 
 ### Contributing
