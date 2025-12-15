@@ -1,5 +1,5 @@
-import { BaseNextcloudClient } from './base';
-import { Calendar, Event } from '../models/calendar';
+import { BaseNextcloudClient } from './base.js';
+import { Calendar, Event } from '../models/calendar.js';
 import { XMLParser } from 'fast-xml-parser';
 
 export class CalendarClient extends BaseNextcloudClient {

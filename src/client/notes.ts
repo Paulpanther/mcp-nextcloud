@@ -1,5 +1,5 @@
-import { BaseNextcloudClient } from './base';
-import { Note } from '../models/notes';
+import { BaseNextcloudClient } from './base.js';
+import { Note } from '../models/notes.js';
 
 export class NotesClient extends BaseNextcloudClient {
   public async getAllNotes(): Promise<Note[]> {

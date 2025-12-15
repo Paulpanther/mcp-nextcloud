@@ -1,5 +1,5 @@
-import { BaseNextcloudClient } from './base';
-import { AddressBook, Contact } from '../models/contacts';
+import { BaseNextcloudClient } from './base.js';
+import { AddressBook, Contact } from '../models/contacts.js';
 import { XMLParser } from 'fast-xml-parser';
 
 export class ContactsClient extends BaseNextcloudClient {

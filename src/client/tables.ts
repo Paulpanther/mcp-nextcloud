@@ -1,5 +1,5 @@
-import { BaseNextcloudClient } from './base';
-import { Table, Row } from '../models/tables';
+import { BaseNextcloudClient } from './base.js';
+import { Table, Row } from '../models/tables.js';
 
 export class TablesClient extends BaseNextcloudClient {
   public async listTables(): Promise<Table[]> {

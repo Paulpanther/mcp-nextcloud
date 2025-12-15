@@ -1,4 +1,4 @@
-import { BaseNextcloudClient } from './base';
+import { BaseNextcloudClient } from './base.js';
 
 export class WebDAVClient extends BaseNextcloudClient {
   public async listDirectory(path: string): Promise<any> {
