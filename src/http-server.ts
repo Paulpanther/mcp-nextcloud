@@ -15,6 +15,8 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { setCredentials } from './utils/client-manager.js';
@@ -34,6 +36,7 @@ type ToolRegistrationFn = (server: McpServer) => void;
 // Configuration
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const HOST = process.env.HOST || '0.0.0.0';
+const ANALYTICS_FILE = process.env.ANALYTICS_FILE || '/app/data/nextcloud-mcp-analytics.json';
 
 // Analytics tracking
 interface Analytics {
@@ -49,7 +52,7 @@ interface Analytics {
   hourlyRequests: Record<string, number>;
 }
 
-const analytics: Analytics = {
+const defaultAnalytics: Analytics = {
   serverStartTime: new Date().toISOString(),
   totalRequests: 0,
   totalToolCalls: 0,
@@ -61,6 +64,52 @@ const analytics: Analytics = {
   clientsByUserAgent: {},
   hourlyRequests: {},
 };
+
+// Load analytics from file or use defaults
+function loadAnalytics(): Analytics {
+  try {
+    if (fs.existsSync(ANALYTICS_FILE)) {
+      const data = fs.readFileSync(ANALYTICS_FILE, 'utf-8');
+      const loaded = JSON.parse(data) as Analytics;
+      console.log(`📊 Loaded analytics from ${ANALYTICS_FILE}`);
+      return loaded;
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not load analytics file, starting fresh:', error);
+  }
+  return { ...defaultAnalytics };
+}
+
+// Save analytics to file
+function saveAnalytics(): void {
+  try {
+    const dir = path.dirname(ANALYTICS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(ANALYTICS_FILE, JSON.stringify(analytics, null, 2));
+  } catch (error) {
+    console.warn('⚠️ Could not save analytics file:', error);
+  }
+}
+
+// Auto-save analytics every 5 minutes
+setInterval(saveAnalytics, 5 * 60 * 1000);
+
+// Save on process exit
+process.on('SIGTERM', () => {
+  console.log('📊 Saving analytics before shutdown...');
+  saveAnalytics();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('📊 Saving analytics before shutdown...');
+  saveAnalytics();
+  process.exit(0);
+});
+
+const analytics: Analytics = loadAnalytics();
 
 function getUptime(): string {
   const start = new Date(analytics.serverStartTime).getTime();
@@ -343,6 +392,14 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
         <h2>📈 Hourly Requests (Last 24h)</h2>
         <canvas id="hourlyChart"></canvas>
       </div>
+      <div class="chart-card">
+        <h2>📱 Clients by User Agent</h2>
+        <canvas id="clientsChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>🌐 Top IPs</h2>
+        <div id="clients-list"></div>
+      </div>
     </div>
     
     <div class="recent-calls">
@@ -354,7 +411,7 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
   </div>
   
   <script>
-    let toolsChart, hourlyChart;
+    let toolsChart, hourlyChart, clientsChart;
     
     async function fetchData() {
       // Use relative path that works with nginx reverse proxy
@@ -433,6 +490,45 @@ app.get('/analytics/dashboard', (req: Request, res: Response) => {
           plugins: { legend: { labels: { color: '#fff' } } }
         }
       });
+      
+      // Clients by User Agent chart
+      const clientLabels = Object.keys(data.clients.byUserAgent).slice(0, 8);
+      const clientValues = Object.values(data.clients.byUserAgent).slice(0, 8);
+      
+      if (clientsChart) clientsChart.destroy();
+      clientsChart = new Chart(document.getElementById('clientsChart'), {
+        type: 'bar',
+        data: {
+          labels: clientLabels,
+          datasets: [{
+            label: 'Requests',
+            data: clientValues,
+            backgroundColor: [
+              '#0082c9', '#00678c', '#a0d8ef', '#5bc0de', 
+              '#4a90d9', '#3498db', '#2980b9', '#1abc9c'
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          indexAxis: 'y',
+          scales: {
+            x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+            y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+      
+      // Top IPs list
+      const ipList = document.getElementById('clients-list');
+      const topIps = Object.entries(data.clients.byIp).slice(0, 10);
+      ipList.innerHTML = topIps.map(([ip, count]) => \`
+        <div class="call-item">
+          <span class="call-tool">\${ip}</span>
+          <span class="call-time">\${count} requests</span>
+        </div>
+      \`).join('') || '<p style="color: rgba(255,255,255,0.6);">No data yet</p>';
     }
     
     function updateRecentCalls(data) {
