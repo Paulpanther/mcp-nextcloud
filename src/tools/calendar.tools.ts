@@ -11,7 +11,7 @@ import { prefixToolName } from '../utils/tool-naming.js';
 export function registerCalendarTools(server: McpServer) {
   server.tool(
     prefixToolName('calendar_list_calendars'),
-    'List all calendars in Nextcloud',
+    'List all calendars in Nextcloud. ' + (process.env['DESCRIPTION_CALENDAR_LIST_CALENDARS'] ?? ''),
     {},
     async () => {
       const calendars = await getClient(CalendarClient).listCalendars();
@@ -28,7 +28,7 @@ export function registerCalendarTools(server: McpServer) {
 
   server.tool(
     prefixToolName('calendar_create_event'),
-    'Create a new calendar event',
+    'Create a new calendar event. ' + (process.env['DESCRIPTION_CALENDAR_CREATE_EVENT'] ?? ''),
     {
       calendarId: z.string().describe('The ID of the calendar'),
       event: z.object({
@@ -54,7 +54,7 @@ export function registerCalendarTools(server: McpServer) {
 
   server.tool(
     prefixToolName('calendar_list_events'),
-    'List events from a calendar',
+    'List events from a calendar. ' + (process.env['DESCRIPTION_CALENDAR_LIST_EVENTS'] ?? ''),
     {
       calendarId: z.string().describe('The ID of the calendar'),
       start: z.string().optional().describe('Start date filter (ISO format)'),
@@ -75,7 +75,7 @@ export function registerCalendarTools(server: McpServer) {
 
   server.tool(
     prefixToolName('calendar_get_event'),
-    'Get details of a specific event',
+    'Get details of a specific event. ' + (process.env['DESCRIPTION_CALENDAR_GET_EVENT'] ?? ''),
     {
       calendarId: z.string().describe('The ID of the calendar'),
       eventId: z.string().describe('The ID of the event'),
@@ -95,7 +95,7 @@ export function registerCalendarTools(server: McpServer) {
 
   server.tool(
     prefixToolName('calendar_update_event'),
-    'Update an existing event',
+    'Update an existing event. ' + (process.env['DESCRIPTION_CALENDAR_UPDATE_EVENT'] ?? ''),
     {
       calendarId: z.string().describe('The ID of the calendar'),
       eventId: z.string().describe('The ID of the event'),
@@ -122,7 +122,7 @@ export function registerCalendarTools(server: McpServer) {
 
   server.tool(
     prefixToolName('calendar_delete_event'),
-    'Delete an event from calendar',
+    'Delete an event from calendar. ' + (process.env['DESCRIPTION_CALENDAR_DELETE_EVENT'] ?? ''),
     {
       calendarId: z.string().describe('The ID of the calendar'),
       eventId: z.string().describe('The ID of the event'),
