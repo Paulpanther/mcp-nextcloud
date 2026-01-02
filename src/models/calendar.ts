@@ -1,3 +1,14 @@
+export interface ICalProp {
+  name: string;
+  value: string;
+  attribs: ICalAttrib[];
+}
+
+export interface ICalAttrib {
+  name: string;
+  value: string;
+}
+
 export interface Calendar {
   id: string;
   displayName: string;

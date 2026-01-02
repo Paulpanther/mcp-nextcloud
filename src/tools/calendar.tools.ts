@@ -81,12 +81,12 @@ export function registerCalendarTools(server: McpServer) {
       eventId: z.string().describe('The ID of the event'),
     },
     async ({ calendarId, eventId }) => {
-      const event = await getClient(CalendarClient).getEvent(calendarId, eventId);
+      const events = await getClient(CalendarClient).getEvent(calendarId, eventId);
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(event, null, 2),
+            text: JSON.stringify(events, null, 2),
           },
         ],
       };

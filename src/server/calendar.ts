@@ -24,7 +24,7 @@ export async function nc_calendar_list_events(
 export async function nc_calendar_get_event(
   calendarId: string,
   eventId: string
-): Promise<Event> {
+): Promise<Event[]> {
   return getClient(CalendarClient).getEvent(calendarId, eventId);
 }
 

@@ -1,5 +1,5 @@
 import { BaseNextcloudClient } from './base.js';
-import { Calendar, Event } from '../models/calendar.js';
+import {Calendar, Event, ICalProp} from '../models/calendar.js';
 import { XMLParser } from 'fast-xml-parser';
 
 export class CalendarClient extends BaseNextcloudClient {
@@ -126,14 +126,14 @@ export class CalendarClient extends BaseNextcloudClient {
   public async getEvent(
     calendarId: string,
     eventId: string
-  ): Promise<Event> {
+  ): Promise<Event[]> {
     const response = await this.makeWebDAVRequest({
       method: 'GET',
       url: `/remote.php/dav/calendars/{username}/${calendarId}/${eventId}`,
     });
 
-    const event = this.parseICalendar(response);
-    return { ...event, id: eventId, calendarId };
+    const events = this.parseICalendar(response);
+    return events.map(event => ({ ...event, id: eventId, calendarId }));
   }
 
   public async updateEvent(
@@ -325,18 +325,20 @@ export class CalendarClient extends BaseNextcloudClient {
           
           // Decode HTML entities
           const decodedIcal = this.decodeHtmlEntities(calendarData);
-          const event = this.parseICalendar(decodedIcal);
+          const newEvents = this.parseICalendar(decodedIcal);
           const pathParts = href.split('/');
           const id = pathParts[pathParts.length - 1];
           const etag = prop['d:getetag'] ||
                       prop['D:getetag'] ||
                       prop.getetag || '';
-          events.push({
-            id,
-            etag,
-            uri: href,
-            ...event
-          });
+          for (const event of newEvents) {
+            events.push({
+              id,
+              etag,
+              uri: href,
+              ...event
+            });
+          }
         } else if (href) {
           console.log('Skipping non-iCalendar resource:', href, {
             hasCalendarData: !!calendarData,
@@ -353,17 +355,47 @@ export class CalendarClient extends BaseNextcloudClient {
     }
   }
 
-  private parseICalendar(icalData: string): Partial<Event> {
-    const event: Partial<Event> = {};
+  private icalToJson(icalData: string): ICalProp[] {
     const lines = icalData.split(/\r?\n/);
+    const props: ICalProp[] = [];
 
     for (const line of lines) {
       const [property, value] = line.split(':');
       if (!property || !value) continue;
 
-      const propName = property.split(';')[0];
+      const [name, attribsPart] = property.split(';');
+      props.push({
+        name,
+        value,
+        attribs: attribsPart
+          ?.split('=')
+          ?.map(([name, value]) => ({name, value})) ?? []});
+    }
 
-      switch (propName) {
+    return props;
+  }
+
+  private parseICalendarRecursive(ical: ICalProp[], state: {line: number}, type: string | null, consumer: (prop: ICalProp) => void) {
+    while (state.line < ical.length) {
+      const {name, value, attribs} = ical[state.line++];
+
+      switch (name) {
+        case 'END':
+          if (value === type) {
+            return;
+          }
+          break;
+        default:
+          consumer({name, value, attribs});
+      }
+    }
+  }
+
+  private parseICalendarEvent(ical: ICalProp[], state: {line: number}): Partial<Event> {
+    const event: Partial<Event> = {};
+
+    this.parseICalendarRecursive(ical, state, 'VEVENT', ({name, value, attribs}) => {
+      switch (name) {
         case 'SUMMARY':
           event.summary = value;
           break;
@@ -385,10 +417,35 @@ export class CalendarClient extends BaseNextcloudClient {
         case 'PRIORITY':
           event.priority = parseInt(value) || 0;
           break;
+        case 'RRULE':
+          event.recurrenceRule = value;
+          break;
+        case 'BEGIN':
+          this.parseICalendarRecursive(ical, state, value, () => {});
       }
-    }
+    });
 
     return event;
+  }
+
+  private parseICalendar(icalData: string): Partial<Event>[] {
+    const ical = this.icalToJson(icalData);
+    const events: Partial<Event>[] = [];
+
+    const state = {line: 1}; // skip first line (BEGIN:VCALENDAR)
+    this.parseICalendarRecursive(ical, state, 'VCALENDAR', ({name, value}) => {
+      switch (name) {
+        case 'BEGIN':
+          if (value === 'VEVENT') {
+            events.push(this.parseICalendarEvent(ical, state));
+          } else {
+            this.parseICalendarRecursive(ical, state, value, () => {});
+          }
+          break;
+      }
+    });
+
+    return events;
   }
 
   private createICalendar(event: Partial<Event>): string {
