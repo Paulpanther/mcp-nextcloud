@@ -108,7 +108,7 @@ export class CalendarClient extends BaseNextcloudClient {
   <C:filter>
     <C:comp-filter name="VCALENDAR">
       <C:comp-filter name="VEVENT">
-      ${start || end ? `<C:time-range ${start ? `start="${start}"` : ''} ${end ? `end="${end}"` : ''}/>` : ''}
+      ${start || end ? `<C:time-range ${start ? `start="${this.convertToICalDateTime(start)}"` : ''} ${end ? `end="${this.convertToICalDateTime(end)}"` : ''}/>` : ''}
       </C:comp-filter>
     </C:comp-filter>
   </C:filter>
